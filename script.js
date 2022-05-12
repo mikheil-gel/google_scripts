@@ -1,30 +1,27 @@
 function onEdit(e) {
+  setUserAndDate(e);
+}
+
+function setUserAndDate(e) {
+  //our variables
+  var usersSheetName = 'Sheet1';
+  var editableColumn = 1;
+  var startRow = 2;
+
+  //data from event
+  var activeSheet = e.source.getActiveSheet();
+  var activeSheetName = activeSheet.getName();
   var col = e.range.getColumn();
-  if (col === 1) {
-    var row = e.range.getRow();
-    e.source
-      .getActiveSheet()
-      .getRange(row, 2)
-      .setValue(getCurrentUserEmail() + ' ' + new Date());
+  var row = e.range.getRow();
+  if (activeSheetName === usersSheetName && col === editableColumn && row >= startRow) {
+    var date = new Date();
+    var userColumn = editableColumn + 1;
+    var dateColumn = editableColumn + 2;
+    setCellValue(activeSheet, row, userColumn, e.user);
+    setCellValue(activeSheet, row, dateColumn, date);
   }
 }
 
-function getCurrentUserEmail() {
-  var userEmail = Session.getActiveUser().getEmail();
-  if (userEmail === '' || !userEmail || userEmail === undefined) {
-    userEmail = PropertiesService.getUserProperties().getProperty('userEmail');
-    if (!userEmail) {
-      var protection = SpreadsheetApp.getActive().getRange('A1').protect();
-      protection.removeEditors(protection.getEditors());
-      var editors = protection.getEditors();
-      if (editors.length === 2) {
-        var owner = SpreadsheetApp.getActive().getOwner();
-        editors.splice(editors.indexOf(owner), 1);
-      }
-      userEmail = editors[0];
-      protection.remove();
-      PropertiesService.getUserProperties().setProperty('userEmail', userEmail);
-    }
-  }
-  return userEmail;
+function setCellValue(sheet, row, col, data) {
+  sheet.getRange(row, col).setValue(data);
 }
