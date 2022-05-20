@@ -7,44 +7,50 @@ function onEdit(e) {
 // function to set user and date after edit happened
 function setUserAndDate(e) {
   // !!!
-  // User should provide 4 values:
-  // sheetName, columnStart, columnEnd, startRow;
+  // User should provide 6 values:
+  // sheetName, startRow, startColumn, endColumn, userColumn, dateColumn;
 
   // Name of the sheet; example: ='Sheet1';
-  var sheetName = 'Sheet1';
-
-  // change detection start column letter: example: ='A';
-  var columnStart = 'A';
-
-  // change detection end column letter, if it is just one column, should be same as 'columnStart';
-  var columnEnd = 'A';
+  const sheetName = 'Sheet1';
 
   // change detection start row number, example: = 2;  (if first row is header)
-  var startRow = 2;
+  const startRow = 2;
+
+  // change detection start column letter: example: ='A';
+  const startColumn = 'A';
+
+  // change detection end column letter, if it is just one column, should be same as 'startColumn';
+  const endColumn = 'A';
+
+  // user column letter;
+  const userColumn = 'B';
+
+  // date column letter;
+  const dateColumn = 'C';
 
   // !!!
   // rest of the code does not require user interaction
 
   // converting column letters to numbers
-  var colStart = columnLetterToNumber(columnStart);
-  var colEnd = columnStart === columnEnd ? colStart : columnLetterToNumber(columnEnd);
+  const startCol = columnLetterToNumber(startColumn);
+  const endCol = startColumn === endColumn ? startCol : columnLetterToNumber(endColumn);
+  const userCol = columnLetterToNumber(userColumn);
+  const dateCol = columnLetterToNumber(dateColumn);
 
   // getting data from the event object
-  var activeSheet = e.source.getActiveSheet();
-  var activeSheetName = activeSheet.getName();
-  var col = e.range.getColumn();
-  var row = e.range.getRow();
+  const activeSheet = e.source.getActiveSheet();
+  const activeSheetName = activeSheet.getName();
+  const col = e.range.getColumn();
+  const row = e.range.getRow();
 
   // checking if edit happened at the change detection range
-  if (activeSheetName === sheetName && col <= colEnd && col >= colStart && row >= startRow) {
+  if (activeSheetName === sheetName && col <= endCol && col >= startCol && row >= startRow) {
     // formatting current date
-    var date = Utilities.formatDate(new Date(), 'GMT', 'yyyy/MM/dd HH:mm:ss');
+    const date = Utilities.formatDate(new Date(), 'GMT', 'yyyy/MM/dd HH:mm:ss');
 
-    // appending user and date into next two columns
-    var userColumn = colEnd + 1;
-    var dateColumn = colEnd + 2;
-    setCellValue(activeSheet, row, userColumn, e.user);
-    setCellValue(activeSheet, row, dateColumn, date);
+    // appending user and date into columns
+    setCellValue(activeSheet, row, userCol, e.user);
+    setCellValue(activeSheet, row, dateCol, date);
   }
 }
 
@@ -55,13 +61,13 @@ function setCellValue(sheet, row, column, data) {
 
 // convert column letter to number
 function columnLetterToNumber(letter) {
-  var len = letter.length;
+  let len = letter.length;
   if (len === 1) {
     return letter.charCodeAt(0) - 64;
   } else if (len > 1) {
-    var letterNum = 0;
+    let letterNum = 0;
     for (var i = 0; i < len; i++) {
-      var pow = len - 1 - i;
+      let pow = len - 1 - i;
       letterNum += (letter[i].charCodeAt(0) - 64) * 26 ** pow;
     }
     return letterNum;
