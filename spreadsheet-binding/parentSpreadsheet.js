@@ -81,6 +81,9 @@ function updateTargetSpreadsheet(e, sheetName, spreadsheetId, targetSheetName = 
     const targetSheet = targetApp.getSheetByName(targetSheetName);
     const tergetRange = targetSheet.getRange(rangeNotation);
 
+    //clear data
+    targetSheet.clear();
+
     // update target sheet values
     tergetRange.setValues(rangeValues);
     // check if  the current sheet has formulas
