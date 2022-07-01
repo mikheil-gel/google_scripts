@@ -4,7 +4,7 @@
 // permissions should be granted
 function createTriggers() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  // check if trigger already exist
+  // check if trigger already exists
   const triggers = ScriptApp.getUserTriggers(ss);
   let triggerExists = false;
   triggers.forEach((item) => {
@@ -49,7 +49,7 @@ function updateTargetSpreadsheet(e, sheetName, spreadsheetId, targetSheetName = 
     // get range values
     const rangeValues = dataRange.getValues();
 
-    // get range formulass
+    // get range formulas
     const rangeFormulas = dataRange.getFormulas();
 
     // create an array and save formulas addresses
@@ -79,13 +79,13 @@ function updateTargetSpreadsheet(e, sheetName, spreadsheetId, targetSheetName = 
     // get target sheet
     const targetApp = SpreadsheetApp.openById(spreadsheetId);
     const targetSheet = targetApp.getSheetByName(targetSheetName);
-    const tergetRange = targetSheet.getRange(rangeNotation);
+    const targetRange = targetSheet.getRange(rangeNotation);
 
     //clear data
     targetSheet.clear();
 
     // update target sheet values
-    tergetRange.setValues(rangeValues);
+    targetRange.setValues(rangeValues);
     // check if  the current sheet has formulas
     if (formulasAddresses.length) {
       // overwrite values with formulas in the target sheet
@@ -95,16 +95,16 @@ function updateTargetSpreadsheet(e, sheetName, spreadsheetId, targetSheetName = 
       });
     }
     //update formatting
-    tergetRange.setBackgrounds(background);
-    tergetRange.setFontColors(fontColor);
-    tergetRange.setFontFamilies(fontFamily);
-    tergetRange.setFontLines(fontLine);
-    tergetRange.setFontSizes(fontSize);
-    tergetRange.setFontStyles(fontStyle);
-    tergetRange.setFontWeights(fontWeight);
-    tergetRange.setTextStyles(textStyle);
-    tergetRange.setHorizontalAlignments(horAlign);
-    tergetRange.setVerticalAlignments(vertAlign);
+    targetRange.setBackgrounds(background);
+    targetRange.setFontColors(fontColor);
+    targetRange.setFontFamilies(fontFamily);
+    targetRange.setFontLines(fontLine);
+    targetRange.setFontSizes(fontSize);
+    targetRange.setFontStyles(fontStyle);
+    targetRange.setFontWeights(fontWeight);
+    targetRange.setTextStyles(textStyle);
+    targetRange.setHorizontalAlignments(horAlign);
+    targetRange.setVerticalAlignments(vertAlign);
 
     for (let i in bandings) {
       let srcBandA1 = bandings[i].getRange().getA1Notation();
