@@ -1,5 +1,10 @@
 // !!!
-// 6 values should be provided:
+// script uses advanced service: Sheets API
+// it should be added manually:
+// Apps Script (Editor)> Services > Google Sheets API > Add;
+
+// !!!
+// 5 values should be provided:
 // localSheetName, headerRows, targetSpreadsheetId,runOnEveryDays,setFilterFromScript
 
 // local sheet name
@@ -15,7 +20,7 @@ const targetSpreadsheetId = '1BeF-2ax7VS7boKktnlt3NI6Y0RYWkwOzaHcjUa9AoMQ';
 const runOnEveryDays = 1;
 
 // option to set filters from the script (boolean value)
-const setFilterFromScript = true;
+const setFilterFromScript = false;
 // !!!
 // if filter should be set from the script (setFilterFromScript is true),
 // array/s should be added in filterArray:
@@ -23,8 +28,8 @@ const setFilterFromScript = true;
 // fillterArray should contain array/s with two values:
 // first value: column's (capital)letter/s;
 // second value: criteria bulider with method
-// expamle: ['A', SpreadsheetApp.newFilterCriteria().whenTextNotEqualTo('text')]
-// criterias full list can be found on:
+// example: ['A', SpreadsheetApp.newFilterCriteria().whenTextNotEqualTo('text')]
+// criteria full list can be found on:
 // https://developers.google.com/apps-script/reference/spreadsheet/filter-criteria-builder
 
 const filterArray = [
@@ -82,8 +87,7 @@ function copyData() {
 
   // get filter Range
   let filter = sheet.getFilter();
-  let filterRange = null;
-  let originalfilters = [];
+  let originalCriteria = [];
 
   // set filter from the script
   if (setFilterFromScript) {
@@ -95,11 +99,11 @@ function copyData() {
       for (let i = 1; i <= lastColumn; i++) {
         if (filter.getColumnFilterCriteria(i)) {
           // save original filter criteria
-          originalfilters.push(filter.getColumnFilterCriteria(i).copy());
+          originalCriteria.push(filter.getColumnFilterCriteria(i).copy());
           // clear criteria
           filter.removeColumnFilterCriteria(i);
         } else {
-          originalfilters.push(false);
+          originalCriteria.push(false);
         }
       }
     }
@@ -110,25 +114,18 @@ function copyData() {
   }
 
   // get hidden rows
-  let hiddenRowsIndexes = [];
-  for (let i = 1; i <= lastRow; i++) {
-    if (sheet.isRowHiddenByFilter(i)) {
-      hiddenRowsIndexes.push(i - 1);
+  let hiddenRowsIndexes = getHiddenRowsinGoogleSheets(app.getId(), sheet.getSheetId());
+
+  // reset to original filter criteria
+  if (setFilterFromScript) {
+    for (let i = 1; i <= lastColumn; i++) {
+      if (filter.getColumnFilterCriteria(i)) filter.removeColumnFilterCriteria(i);
+      if (originalCriteria[i - 1]) filter.setColumnFilterCriteria(i, originalCriteria[i - 1].build());
     }
   }
 
   // get range values
   let rangeValues = dataRange.getValues().filter((item, index) => !hiddenRowsIndexes.includes(index));
-
-  // get filter range
-  if (filter) {
-    let lastFilterRow = filter.getRange().getLastRow();
-    let initialRange = filter.getRange().getA1Notation();
-    filterRange = [
-      initialRange.split(':')[0],
-      initialRange.split(':')[1].replace(lastFilterRow, lastFilterRow - hiddenRowsIndexes.length),
-    ].join(':');
-  }
 
   // get target spreadsheet
   const targetApp = SpreadsheetApp.openById(targetSpreadsheetId);
@@ -146,19 +143,6 @@ function copyData() {
 
   // set target sheet values
   targetRange.setValues(rangeValues);
-
-  // create filter on target sheet
-  if (filterRange) {
-    targetSheet.getRange(filterRange).createFilter();
-  }
-
-  // reset to original filter criteria
-  if (setFilterFromScript) {
-    for (let i = 1; i <= lastColumn; i++) {
-      if (filter.getColumnFilterCriteria(i)) filter.removeColumnFilterCriteria(i);
-      if (originalfilters[i - 1]) filter.setColumnFilterCriteria(i, originalfilters[i - 1].build());
-    }
-  }
 }
 
 // function to convert column letters to numbers
@@ -175,3 +159,22 @@ function columnLetterToNumber(letter) {
     return letterNum;
   }
 }
+
+// function to get hidden rows;
+const getHiddenRowsinGoogleSheets = (spreadsheetId, sheetId) => {
+  const fields = 'sheets(data(rowMetadata(hiddenByFilter)),properties/sheetId)';
+  const { sheets } = Sheets.Spreadsheets.get(spreadsheetId, { fields });
+  const [sheet] = sheets.filter(({ properties }) => {
+    return String(properties.sheetId) === String(sheetId);
+  });
+
+  const { data: [{ rowMetadata = [] }] = {} } = sheet;
+
+  const hiddenRows = rowMetadata
+    .map(({ hiddenByFilter }, index) => {
+      return hiddenByFilter ? index : -1;
+    })
+    .filter((rowId) => rowId !== -1);
+
+  return hiddenRows;
+};
