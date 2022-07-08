@@ -40,17 +40,23 @@ function setUserAndDate(e) {
   // getting data from the event object
   const activeSheet = e.source.getActiveSheet();
   const activeSheetName = activeSheet.getName();
-  const col = e.range.getColumn();
-  const row = e.range.getRow();
+  const firstCol = e.range.getColumn();
+  const lastCol = e.range.getLastColumn();
+  const firstRow = e.range.getRow();
+  const lastRow = e.range.getLastRow();
 
   // checking if edit happened at the change detection range
-  if (activeSheetName === sheetName && col <= endCol && col >= startCol && row >= startRow) {
+  if (activeSheetName === sheetName && firstCol <= endCol && lastCol >= startCol && lastRow >= startRow) {
     // formatting current date
     const date = Utilities.formatDate(new Date(), 'GMT', 'yyyy/MM/dd HH:mm:ss');
 
     // appending user and date into columns
-    setCellValue(activeSheet, row, userCol, e.user);
-    setCellValue(activeSheet, row, dateCol, date);
+    let row = firstRow >= startRow ? firstRow : startRow;
+    while (row <= lastRow) {
+      setCellValue(activeSheet, row, userCol, e.user);
+      setCellValue(activeSheet, row, dateCol, date);
+      row++;
+    }
   }
 }
 
