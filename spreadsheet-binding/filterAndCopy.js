@@ -4,8 +4,8 @@
 // Apps Script (Editor)> Services > Google Sheets API > Add;
 
 // !!!
-// 5 values should be provided:
-// localSheetName, headerRows, targetSpreadsheetId,runOnEveryDays,setFilterFromScript
+// 6 values should be provided:
+// localSheetName, headerRows, targetSpreadsheetId, runOnEveryDays, runAtHour, setFilterFromScript
 
 // local sheet name
 const localSheetName = 'Sheet1';
@@ -18,6 +18,9 @@ const targetSpreadsheetId = '1BeF-2ax7VS7boKktnlt3NI6Y0RYWkwOzaHcjUa9AoMQ';
 
 // number of days function should run (1 - once a day, 7 - once a week)
 const runOnEveryDays = 1;
+
+// time (hour) function should run (integers from 0 to 23)
+const runAtHour = 0;
 
 // option to set filters from the script (boolean value)
 const setFilterFromScript = false;
@@ -58,7 +61,7 @@ function createTrigger() {
   }
 
   // create time based trigger
-  ScriptApp.newTrigger('timeBasedEvent').timeBased().everyDays(runOnEveryDays).create();
+  ScriptApp.newTrigger('timeBasedEvent').timeBased().everyDays(runOnEveryDays).atHour(runAtHour).create();
 
   // copy data to target spreadsheet
   copyData();
@@ -152,7 +155,7 @@ function columnLetterToNumber(letter) {
     return letter.charCodeAt(0) - 64;
   } else if (len > 1) {
     let letterNum = 0;
-    for (var i = 0; i < len; i++) {
+    for (let i = 0; i < len; i++) {
       let pow = len - 1 - i;
       letterNum += (letter[i].charCodeAt(0) - 64) * 26 ** pow;
     }
