@@ -150,26 +150,7 @@ function copyData() {
   let rangeValues = copyRange.getValues().filter((item, index) => !hiddenRowsIndexes.includes(index));
 
   // get links
-  let linksArr = [];
-
-  copyRange
-    .getRichTextValues()
-    .filter((item, index) => !hiddenRowsIndexes.includes(index))
-    .forEach((rt, rowIndex) => {
-      rt.forEach((ct, columnIndex) => {
-        let links = [];
-        let indexes = [];
-        ct.getRuns().forEach((rr) => {
-          let link = rr.getLinkUrl();
-          if (link) {
-            links.push(link);
-            indexes.push([rr.getStartIndex(), rr.getEndIndex()]);
-          }
-        });
-
-        if (links.length) linksArr.push({ links, indexes, row: rowIndex + 1, column: columnIndex + 1 });
-      });
-    });
+  let richTextVal = copyRange.getRichTextValues().filter((item, index) => !hiddenRowsIndexes.includes(index));
 
   // get header colors
   const headerBackground = headerRange.getBackgrounds();
@@ -196,21 +177,7 @@ function copyData() {
   targetRange.setValues(rangeValues);
 
   // set links
-  if (linksArr.length) {
-    linksArr.forEach((data) => {
-      let cell = targetSheet.getRange(data.row, data.column);
-      let cellValue = cell.getValue();
-      let length = data.links.length;
-
-      let richText = SpreadsheetApp.newRichTextValue().setText(cellValue);
-      for (let i = 0; i < length; i++) {
-        richText.setLinkUrl(...data.indexes[i], data.links[i]);
-      }
-      richText = richText.build();
-
-      cell.setRichTextValue(richText);
-    });
-  }
+  targetRange.setRichTextValues(richTextVal);
 
   // set header colors
   targetHeaderRange.setFontColors(headerFontColor);
