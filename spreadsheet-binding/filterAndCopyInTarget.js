@@ -4,20 +4,26 @@
 // Apps Script (Editor)> Services > Google Sheets API > Add;
 
 // !!!
-// 7 values should be provided:
-// localSpreadsheetId, dataSpreadsheetId, dataSheetName, dataHeaderRows, runOnEveryDays, runAtHour, setFilterFromScript
+// 9 values should be provided:
+// localSpreadsheetId, dataSpreadsheetId, dataSheetName, dataHeaderRows, copyStartColumn, copyEndColumn, runOnEveryDays, runAtHour, setFilterFromScript
 
 // local spreadsheet id
-const localSpreadsheetId = '1KhBarhr1Owg5OO-TqK3wdBtvN0_30qaVRS_cFtjctnU';
+const localSpreadsheetId = '15oOezoM4mNzDrAxfJBrDLkP-YudAR1NFJNWmGrdGI4Y';
 
 // data spreadsheet id
-const dataSpreadsheetId = '1BeF-2ax7VS7boKktnlt3NI6Y0RYWkwOzaHcjUa9AoMQ';
+const dataSpreadsheetId = '19D-XDwswxFfl--hTlc-Jc7eF_G_CfXdLmfTfYddzziE';
 
 // data sheet name
 const dataSheetName = 'Sheet1';
 
 // data header rows count
 const dataHeaderRows = 2;
+
+// copy range start column letter
+const copyStartColumn = 'B';
+
+// copy range end column letter
+const copyEndColumn = 'C';
 
 // number of days function should run (1 - once a day, 7 - once a week)
 const runOnEveryDays = 1;
@@ -39,7 +45,7 @@ const setFilterFromScript = false;
 // https://developers.google.com/apps-script/reference/spreadsheet/filter-criteria-builder
 
 const filterArray = [
-  ['C', SpreadsheetApp.newFilterCriteria().whenTextEqualTo('vue')],
+  ['C', SpreadsheetApp.newFilterCriteria().whenTextContains('react')],
   ['D', SpreadsheetApp.newFilterCriteria().whenNumberGreaterThan(1)],
 ];
 
@@ -87,17 +93,22 @@ function copyData() {
   const lastColumn = sheet.getLastColumn();
   // get range with data
   const dataRange = sheet.getDataRange();
+  // get header range
+  const headerRange = sheet.getRange(`${copyStartColumn}1:${copyEndColumn}${dataHeaderRows}`);
+  // get copy range
+  const copyRange = sheet.getRange(`${copyStartColumn}1:${copyEndColumn}${lastRow}`);
 
   // get range address
   const rangeNotation = dataRange.getA1Notation();
 
   // get filter Range
   let filter = sheet.getFilter();
+  const filterPresent = !!filter;
   let originalCriteria = [];
 
   // set filter from the script
   if (setFilterFromScript) {
-    if (!filter) {
+    if (!filterPresent) {
       // create new filter
       const filterRangeNotation = rangeNotation.replace('A1', `A${dataHeaderRows}`);
       filter = sheet.getRange(filterRangeNotation).createFilter();
@@ -124,31 +135,76 @@ function copyData() {
 
   // reset to original filter criteria
   if (setFilterFromScript) {
-    for (let i = 1; i <= lastColumn; i++) {
-      if (filter.getColumnFilterCriteria(i)) filter.removeColumnFilterCriteria(i);
-      if (originalCriteria[i - 1]) filter.setColumnFilterCriteria(i, originalCriteria[i - 1].build());
+    if (filterPresent) {
+      for (let i = 1; i <= lastColumn; i++) {
+        if (filter.getColumnFilterCriteria(i)) filter.removeColumnFilterCriteria(i);
+        if (originalCriteria[i - 1]) filter.setColumnFilterCriteria(i, originalCriteria[i - 1].build());
+      }
+    } else {
+      filter.remove();
     }
   }
 
   // get range values
-  let rangeValues = dataRange.getValues().filter((item, index) => !hiddenRowsIndexes.includes(index));
+  let rangeValues = copyRange.getValues().filter((item, index) => !hiddenRowsIndexes.includes(index));
+
+  // get links
+  let linksArr = [];
+
+  copyRange
+    .getRichTextValues()
+    .filter((item, index) => !hiddenRowsIndexes.includes(index))
+    .forEach((rt, rowIndex) => {
+      rt.forEach((ct, columnIndex) => {
+        let link = '';
+        ct.getRuns().forEach((rr) => {
+          let linkExists = rr.getLinkUrl();
+          if (linkExists) link += link ? '[NEXT_LINK]' + linkExists : linkExists;
+        });
+
+        if (link) linksArr.push({ link, row: rowIndex + 1, column: columnIndex + 1 });
+      });
+    });
+
+  // get header colors
+  const headerBackground = headerRange.getBackgrounds();
+  const headerFontColor = headerRange.getFontColors();
 
   // get target spreadsheet
   const targetApp = SpreadsheetApp.openById(localSpreadsheetId);
 
+  // get spreadsheet's time zone
+  let timeZone = targetApp.getSpreadsheetTimeZone();
   // get current time
-  const date = Utilities.formatDate(new Date(), 'GMT', 'yyyy/MM/dd HH:mm:ss');
+  const date = Utilities.formatDate(new Date(), timeZone, 'yyyy/MM/dd HH:mm:ss');
   // create new sheet
   let targetSheet = targetApp.insertSheet();
   // set time as a sheet name
   targetSheet.setName(date);
   // get target range
-  const targetRange = targetSheet.getRange(
-    ['A1', rangeNotation.split(':')[1].replace(lastRow, lastRow - hiddenRowsIndexes.length)].join(':')
-  );
+  const rowCount = lastRow - hiddenRowsIndexes.length;
+  const columnCount = copyRange.getLastColumn() - copyRange.getColumn() + 1;
+  const targetRange = targetSheet.getRange(1, 1, rowCount, columnCount);
+  const targetHeaderRange = targetSheet.getRange(1, 1, dataHeaderRows, columnCount);
 
   // set target sheet values
   targetRange.setValues(rangeValues);
+
+  // set links
+  if (linksArr.length) {
+    linksArr.forEach((data) => {
+      let cell = targetSheet.getRange(data.row, data.column);
+      let cellValue = cell.getValue();
+
+      let richText = SpreadsheetApp.newRichTextValue().setText(cellValue).setLinkUrl(data.link).build();
+
+      cell.setRichTextValue(richText);
+    });
+  }
+
+  // set header colors
+  targetHeaderRange.setFontColors(headerFontColor);
+  targetHeaderRange.setBackgrounds(headerBackground);
 }
 
 // function to convert column letters to numbers
