@@ -1,0 +1,78 @@
+Filter criteria list and their methods in the apps script:
+
+list is presented in format:
+name in google sheets filter menu - name for criteria builder method (SpreadsheetApp.newFilterCriteria().methodName())
+
+
+Filter by condition:
+
+
+Empty:
+
+Is empty     - whenCellEmpty()
+Is not empty - whenCellNotEmpty()
+
+
+Text:
+
+Text contains         - whenTextContains('te')
+Text does not contain - whenTextDoesNotContain('a')
+Text starts with      - whenTextStartsWith('t')
+Text ends with        - whenTextEndsWith('t')
+Text is exactly       - whenTextEqualTo('text')
+
+
+Number:
+
+Greater than             - whenNumberGreaterThan(2)
+Greater than or equal to - whenNumberGreaterThanOrEqualTo(2)
+Less than                - whenNumberLessThan(2)
+Less than or equal to    - whenNumberLessThanOrEqualTo(2)
+Is equal to              - whenNumberEqualTo(2)
+Is not equal to          - whenNumberNotEqualTo(2)
+Is between               - whenNumberBetween(2, 10)
+Is not between           - whenNumberNotBetween(2, 10)
+
+
+Date:
+
+date passed as parameter: 
+
+today             - SpreadsheetApp.RelativeDate.TODAY
+tomorrow          - SpreadsheetApp.RelativeDate.TOMORROW
+yesterday         - SpreadsheetApp.RelativeDate.YESTERDAY
+in the past week  - SpreadsheetApp.RelativeDate.PAST_WEEK
+in the past month - SpreadsheetApp.RelativeDate.PAST_MONTH
+in the past year  - SpreadsheetApp.RelativeDate.PAST_YEAR
+exact date        - new Date('Jan 1, 2022')
+
+let date = SpreadsheetApp.RelativeDate.TODAY // new Date('Jan 1, 2022')
+
+methods:
+
+Date is         - whenDateEqualTo(date)
+Date is before  - whenDateBefore(date)
+Date is after   - whenDateAfter(date)
+
+
+Formula:
+
+Custom formula is - whenFormulaSatisfied('=B:B<C:C');
+
+
+Filter by values:
+
+All kinds of value filtering is done by passing an array of values that should be hidden:
+
+Select all / Clear - setHiddenValues(['Anna','Bob'])
+
+
+Filter by color:
+
+color passed as parameter: 
+
+let color = SpreadsheetApp.newColor().setRgbColor("#000000").build();
+
+Fill color - setVisibleBackgroundColor(color)
+Text color - setVisibleForegroundColor(color)
+
