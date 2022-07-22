@@ -42,7 +42,8 @@ const setFilterFromScript = false;
 // second value: criteria bulider with method
 // example: ['A', SpreadsheetApp.newFilterCriteria().whenTextNotEqualTo('text')]
 // criteria full list can be found on:
-// https://developers.google.com/apps-script/reference/spreadsheet/filter-criteria-builder
+// mine: https://github.com/mikheil-gel/google_scripts/blob/main/spreadsheet-binding/filterCriteria.txt
+// official: https://developers.google.com/apps-script/reference/spreadsheet/filter-criteria-builder
 
 const filterArray = [
   ['C', SpreadsheetApp.newFilterCriteria().whenTextContains('react')],
@@ -156,13 +157,17 @@ function copyData() {
     .filter((item, index) => !hiddenRowsIndexes.includes(index))
     .forEach((rt, rowIndex) => {
       rt.forEach((ct, columnIndex) => {
-        let link = '';
+        let links = [];
+        let indexes = [];
         ct.getRuns().forEach((rr) => {
-          let linkExists = rr.getLinkUrl();
-          if (linkExists) link += link ? '[NEXT_LINK]' + linkExists : linkExists;
+          let link = rr.getLinkUrl();
+          if (link) {
+            links.push(link);
+            indexes.push([rr.getStartIndex(), rr.getEndIndex()]);
+          }
         });
 
-        if (link) linksArr.push({ link, row: rowIndex + 1, column: columnIndex + 1 });
+        if (links.length) linksArr.push({ links, indexes, row: rowIndex + 1, column: columnIndex + 1 });
       });
     });
 
@@ -195,8 +200,13 @@ function copyData() {
     linksArr.forEach((data) => {
       let cell = targetSheet.getRange(data.row, data.column);
       let cellValue = cell.getValue();
+      let length = data.links.length;
 
-      let richText = SpreadsheetApp.newRichTextValue().setText(cellValue).setLinkUrl(data.link).build();
+      let richText = SpreadsheetApp.newRichTextValue().setText(cellValue);
+      for (let i = 0; i < length; i++) {
+        richText.setLinkUrl(...data.indexes[i], data.links[i]);
+      }
+      richText = richText.build();
 
       cell.setRichTextValue(richText);
     });
