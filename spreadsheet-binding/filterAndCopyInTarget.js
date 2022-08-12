@@ -4,8 +4,8 @@
 // Apps Script (Editor)> Services > Google Sheets API > Add;
 
 // !!!
-// 9 values should be provided:
-// localSpreadsheetId, dataSpreadsheetId, dataSheetName, dataHeaderRows, copyStartColumn, copyEndColumn, runOnEveryDays, runAtHour, setFilterFromScript
+// 11 values should be provided:
+// localSpreadsheetId, dataSpreadsheetId, dataSheetName, dataHeaderRows, copyStartColumn, copyEndColumn, runOnEveryDays, enableWeekday, weekday, runAtHour, setFilterFromScript
 
 // local spreadsheet id
 const localSpreadsheetId = '15oOezoM4mNzDrAxfJBrDLkP-YudAR1NFJNWmGrdGI4Y';
@@ -20,13 +20,21 @@ const dataSheetName = 'Sheet1';
 const dataHeaderRows = 2;
 
 // copy range start column letter
-const copyStartColumn = 'B';
+const copyStartColumn = 'A';
 
 // copy range end column letter
 const copyEndColumn = 'C';
 
 // number of days function should run (1 - once a day, 7 - once a week)
+// is used when 'enableWeekday' is false
 const runOnEveryDays = 1;
+
+// option to use 'weekday' instead of 'runOnEveryDays'
+const enableWeekday = false;
+
+// name of the day function should run: ScriptApp.WeekDay.MONDAY
+// is used when 'enableWeekday' is true
+const weekday = ScriptApp.WeekDay.MONDAY;
 
 // time (hour) function should run (integers from 0 to 23)
 const runAtHour = 0;
@@ -71,13 +79,17 @@ function createTrigger() {
   }
 
   // create time based trigger
-  ScriptApp.newTrigger('timeBasedEvent').timeBased().everyDays(runOnEveryDays).atHour(runAtHour).create();
+  if (enableWeekday) {
+    ScriptApp.newTrigger('timeBasedEvent').timeBased().onWeekDay(weekday).atHour(runAtHour).create();
+  } else {
+    ScriptApp.newTrigger('timeBasedEvent').timeBased().everyDays(runOnEveryDays).atHour(runAtHour).create();
+  }
 
   // copy data to target spreadsheet
   copyData();
 }
 
-// trgger function runs once in specified (runOnEveryDays) days
+// trigger function runs once in specified (runOnEveryDays) days
 function timeBasedEvent() {
   copyData();
 }
