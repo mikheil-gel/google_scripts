@@ -7,10 +7,6 @@ function onEdit() {
   setRemainingDays();
 }
 
-function onChange() {
-  setRemainingDays();
-}
-
 // function for setting remaining days
 function setRemainingDays() {
   // !!!
