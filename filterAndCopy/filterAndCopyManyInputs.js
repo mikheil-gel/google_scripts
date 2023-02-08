@@ -105,14 +105,14 @@ function timeBasedEvent() {
 // function for coping values to target spreadsheet
 function copyData() {
   // get target spreadsheet
-  const targetApp = SpreadsheetApp.openById(localSpreadsheetId);
+  const targetSpreadsheet = SpreadsheetApp.openById(localSpreadsheetId);
 
   // get spreadsheet's time zone
-  let timeZone = targetApp.getSpreadsheetTimeZone();
+  let timeZone = targetSpreadsheet.getSpreadsheetTimeZone();
   // get current time
   const date = Utilities.formatDate(new Date(), timeZone, 'yyyy/MM/dd HH:mm:ss');
   // create new sheet
-  let targetSheet = targetApp.insertSheet();
+  let targetSheet = targetSpreadsheet.insertSheet();
   // set time as a sheet name
   targetSheet.setName(date);
 
@@ -120,10 +120,10 @@ function copyData() {
     // get spreadsheet id and sheet name
     const [dataSpreadsheetId, dataSheetName] = spreadsheetsData;
     // get data sheet
-    const app = SpreadsheetApp.openById(dataSpreadsheetId);
-    const sheet = app.getSheetByName(dataSheetName);
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const sheet = spreadsheet.getSheetByName(dataSheetName);
 
-    const firstSheet = index === 0 ? true : false;
+    const firstSheet = index === 0;
 
     const firstDataRow = firstSheet ? 1 : dataHeaderRows + 1;
 
@@ -171,7 +171,7 @@ function copyData() {
     }
 
     // get hidden rows
-    let hiddenRowsIndexes = getHiddenRowsinGoogleSheets(app.getId(), sheet.getSheetId());
+    let hiddenRowsIndexes = getHiddenRowsinGoogleSheets(dataSpreadsheetId, sheet.getSheetId());
 
     // reset to original filter criteria
     if (setFilterFromScript) {
@@ -185,71 +185,77 @@ function copyData() {
       }
     }
 
-    const rowIndexCheck = firstSheet ? 0 : dataHeaderRows;
-
-    // get range values
-    let rangeValues = copyRange.getValues().filter((item, index) => !hiddenRowsIndexes.includes(index + rowIndexCheck));
-
-    // get links
-    let linksArr = [];
-
-    copyRange
-      .getRichTextValues()
-      .filter((item, index) => !hiddenRowsIndexes.includes(index + rowIndexCheck))
-      .forEach((rt, rowIndex) => {
-        rt.forEach((ct, columnIndex) => {
-          let links = [];
-          let indexes = [];
-          ct.getRuns().forEach((rr) => {
-            let link = rr.getLinkUrl();
-            if (link) {
-              links.push(link);
-              indexes.push([rr.getStartIndex(), rr.getEndIndex()]);
-            }
-          });
-
-          if (links.length) linksArr.push({ links, indexes, row: rowIndex, column: columnIndex + 1 });
-        });
-      });
-
-    const firstTargetRow = firstSheet ? 1 : targetSheet.getLastRow() + 1;
-
-    // get target range
     const rowCount = firstSheet
       ? lastRow - hiddenRowsIndexes.length
       : lastRow - hiddenRowsIndexes.length - dataHeaderRows;
-    const columnCount = copyRange.getLastColumn() - copyRange.getColumn() + 1;
-    const targetRange = targetSheet.getRange(firstTargetRow, 1, rowCount, columnCount);
 
-    targetRange.setValues(rangeValues);
+    // check if filtered data exists
+    if (rowCount >= 1) {
+      const rowIndexCheck = firstSheet ? 0 : dataHeaderRows;
 
-    if (firstSheet) {
-      // get header colors
-      const headerBackground = headerRange.getBackgrounds();
-      const headerFontColor = headerRange.getFontColors();
+      // get range values
+      let rangeValues = copyRange
+        .getValues()
+        .filter((item, index) => !hiddenRowsIndexes.includes(index + rowIndexCheck));
 
-      const targetHeaderRange = targetSheet.getRange(1, 1, dataHeaderRows, columnCount);
+      // get links
+      let linksArr = [];
 
-      // set header colors
-      targetHeaderRange.setFontColors(headerFontColor);
-      targetHeaderRange.setBackgrounds(headerBackground);
-    }
+      copyRange
+        .getRichTextValues()
+        .filter((item, index) => !hiddenRowsIndexes.includes(index + rowIndexCheck))
+        .forEach((rt, rowIndex) => {
+          rt.forEach((ct, columnIndex) => {
+            let links = [];
+            let indexes = [];
+            ct.getRuns().forEach((rr) => {
+              let link = rr.getLinkUrl();
+              if (link) {
+                links.push(link);
+                indexes.push([rr.getStartIndex(), rr.getEndIndex()]);
+              }
+            });
 
-    // set links
-    if (linksArr.length) {
-      linksArr.forEach((data) => {
-        let cell = targetSheet.getRange(data.row + firstTargetRow, data.column);
-        let cellValue = cell.getValue();
-        let length = data.links.length;
+            if (links.length) linksArr.push({ links, indexes, row: rowIndex, column: columnIndex + 1 });
+          });
+        });
 
-        let richText = SpreadsheetApp.newRichTextValue().setText(cellValue);
-        for (let i = 0; i < length; i++) {
-          richText.setLinkUrl(...data.indexes[i], data.links[i]);
-        }
-        richText = richText.build();
+      const firstTargetRow = firstSheet ? 1 : targetSheet.getLastRow() + 1;
 
-        cell.setRichTextValue(richText);
-      });
+      // get target range
+      const columnCount = copyRange.getLastColumn() - copyRange.getColumn() + 1;
+      const targetRange = targetSheet.getRange(firstTargetRow, 1, rowCount, columnCount);
+
+      targetRange.setValues(rangeValues);
+
+      if (firstSheet) {
+        // get header colors
+        const headerBackground = headerRange.getBackgrounds();
+        const headerFontColor = headerRange.getFontColors();
+
+        const targetHeaderRange = targetSheet.getRange(1, 1, dataHeaderRows, columnCount);
+
+        // set header colors
+        targetHeaderRange.setFontColors(headerFontColor);
+        targetHeaderRange.setBackgrounds(headerBackground);
+      }
+
+      // set links
+      if (linksArr.length) {
+        linksArr.forEach((data) => {
+          let cell = targetSheet.getRange(data.row + firstTargetRow, data.column);
+          let cellValue = cell.getValue();
+          let length = data.links.length;
+
+          let richText = SpreadsheetApp.newRichTextValue().setText(cellValue);
+          for (let i = 0; i < length; i++) {
+            richText.setLinkUrl(...data.indexes[i], data.links[i]);
+          }
+          richText = richText.build();
+
+          cell.setRichTextValue(richText);
+        });
+      }
     }
   });
 
