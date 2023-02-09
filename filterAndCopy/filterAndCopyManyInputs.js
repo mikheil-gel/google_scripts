@@ -144,26 +144,27 @@ function copyData() {
     // get filter Range
     let filter = sheet.getFilter();
     const filterPresent = !!filter;
+    let originalFilterRange = filterPresent ? filter.getRange().getA1Notation() : '';
     let originalCriteria = [];
 
     // set filter from the script
     if (setFilterFromScript) {
-      if (!filterPresent) {
-        // create new filter
-        const filterRangeNotation = rangeNotation.replace('A1', `A${dataHeaderRows}`);
-        filter = sheet.getRange(filterRangeNotation).createFilter();
-      } else {
-        for (let i = 1; i <= lastColumn; i++) {
+      if (filterPresent) {
+        for (let i = filter.getRange().getColumn(), n = filter.getRange().getLastColumn(); i <= n; i++) {
           if (filter.getColumnFilterCriteria(i)) {
             // save original filter criteria
             originalCriteria.push(filter.getColumnFilterCriteria(i).copy());
-            // clear criteria
-            filter.removeColumnFilterCriteria(i);
           } else {
             originalCriteria.push(false);
           }
         }
+        // remove present filter
+        filter.remove();
       }
+      // create new filter
+      const filterRangeNotation = rangeNotation.replace('A1', `A${dataHeaderRows}`);
+      filter = sheet.getRange(filterRangeNotation).createFilter();
+
       // set new filter criteria
       filterArray.forEach((item) => {
         filter.setColumnFilterCriteria(columnLetterToNumber(item[0]), item[1].build());
@@ -175,13 +176,13 @@ function copyData() {
 
     // reset to original filter criteria
     if (setFilterFromScript) {
+      filter.remove();
       if (filterPresent) {
-        for (let i = 1; i <= lastColumn; i++) {
-          if (filter.getColumnFilterCriteria(i)) filter.removeColumnFilterCriteria(i);
-          if (originalCriteria[i - 1]) filter.setColumnFilterCriteria(i, originalCriteria[i - 1].build());
-        }
-      } else {
-        filter.remove();
+        filter = sheet.getRange(originalFilterRange).createFilter();
+        let firstFilterColumn = filter.getRange().getColumn();
+        originalCriteria.forEach((criteria, columnIndex) => {
+          if (criteria) filter.setColumnFilterCriteria(columnIndex + firstFilterColumn, criteria);
+        });
       }
     }
 
