@@ -153,9 +153,7 @@ function copyData() {
         for (let i = filter.getRange().getColumn(), n = filter.getRange().getLastColumn(); i <= n; i++) {
           if (filter.getColumnFilterCriteria(i)) {
             // save original filter criteria
-            originalCriteria.push(filter.getColumnFilterCriteria(i).copy());
-          } else {
-            originalCriteria.push(false);
+            originalCriteria.push({ column: i, criteria: filter.getColumnFilterCriteria(i).copy() });
           }
         }
         // remove present filter
@@ -179,10 +177,11 @@ function copyData() {
       filter.remove();
       if (filterPresent) {
         filter = sheet.getRange(originalFilterRange).createFilter();
-        let firstFilterColumn = filter.getRange().getColumn();
-        originalCriteria.forEach((criteria, columnIndex) => {
-          if (criteria) filter.setColumnFilterCriteria(columnIndex + firstFilterColumn, criteria);
-        });
+        if (originalCriteria.length) {
+          originalCriteria.forEach((data) => {
+            filter.setColumnFilterCriteria(data.column, data.criteria.build());
+          });
+        }
       }
     }
 
