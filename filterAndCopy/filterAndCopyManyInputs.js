@@ -4,8 +4,8 @@
 // Apps Script (Editor)> Services > Google Sheets API > Add;
 
 // !!!
-// 11 values should be provided:
-// localSpreadsheetId, dataSpreadsheetsArray, dataHeaderRows, copyStartColumn, copyEndColumn, columnsToIgnore, runOnEveryDays, enableWeekday, weekday, runAtHour, setFilterFromScript
+// 14 values should be provided:
+// localSpreadsheetId, dataSpreadsheetsArray, dataHeaderRows, copyStartColumn, copyEndColumn, columnsToIgnore, runOnEveryDays, enableWeekday, weekday, runAtHour, setFilterFromScript, filterArray, totalCountArray, filterToCountInOutputArray
 
 // local spreadsheet id
 const localSpreadsheetId = '1S_gzGL2yRDcvqB6V6iZOSkUkD9jbhQ45FCz3TtTg11c';
@@ -66,6 +66,45 @@ const filterArray = [
   // ['E', SpreadsheetApp.newFilterCriteria().whenNumberGreaterThan(1)],
 ];
 
+// totalCountArray should have two values:
+// first value: cell address where total count should be displayed;
+// second value: text that should be before count number
+// example: ['C1','Total count: ']
+const totalCountArray = ['I1', 'Total count: '];
+
+// filterToCountInOutputArray shoud be given arrays that have 3 values:
+// cell address where count number should be displayed
+// text that should be displayed before count number
+// array with the same format as 'filterArray' above
+/* example: 
+const filterToCountInOutputArray = [ 
+  [
+    'E1','Total test1: ',[ ['D', SpreadsheetApp.newFilterCriteria().whenTextContains('react')],['E', SpreadsheetApp.newFilterCriteria().whenNumberGreaterThan(2) ] ]
+  ],
+  [
+    'F1','Total test2: ' ,[ ['D', SpreadsheetApp.newFilterCriteria().whenTextContains('node') ],['B', SpreadsheetApp.newFilterCriteria().whenTextDoesNotContain('test') ] ] 
+  ]
+]
+*/
+const filterToCountInOutputArray = [
+  [
+    'J1',
+    'Total test1: ',
+    [
+      ['D', SpreadsheetApp.newFilterCriteria().whenTextContains('react')],
+      ['E', SpreadsheetApp.newFilterCriteria().whenNumberGreaterThan(2)],
+    ],
+  ],
+  [
+    'K1',
+    'Total test2: ',
+    [
+      ['D', SpreadsheetApp.newFilterCriteria().whenTextContains('node')],
+      ['B', SpreadsheetApp.newFilterCriteria().whenTextDoesNotContain('test')],
+    ],
+  ],
+];
+
 // !!!
 // this function should run manually from the Apps Script, when:
 // it is first run or runOnEveryDays/runAtHour/weekday variables were changed
@@ -116,6 +155,8 @@ function copyData() {
   // set time as a sheet name
   targetSheet.setName(date);
 
+  let totalCount = 0;
+
   dataSpreadsheetsArray.forEach((spreadsheetsData, index) => {
     // get spreadsheet id and sheet name
     const [dataSpreadsheetId, dataSheetName] = spreadsheetsData;
@@ -129,14 +170,14 @@ function copyData() {
 
     // get last Row
     const lastRow = sheet.getLastRow();
-    // get last Column
-    const lastColumn = sheet.getLastColumn();
     // get range with data
     const dataRange = sheet.getDataRange();
     // get header range
     const headerRange = sheet.getRange(`${copyStartColumn}1:${copyEndColumn}${dataHeaderRows}`);
     // get copy range
     const copyRange = sheet.getRange(`${copyStartColumn}${firstDataRow}:${copyEndColumn}${lastRow}`);
+
+    totalCount += lastRow - dataHeaderRows;
 
     // get range address
     const rangeNotation = dataRange.getA1Notation();
@@ -170,7 +211,7 @@ function copyData() {
     }
 
     // get hidden rows
-    let hiddenRowsIndexes = getHiddenRowsinGoogleSheets(dataSpreadsheetId, sheet.getSheetId());
+    let hiddenRowsIndexes = getHiddenRows(dataSpreadsheetId, sheet.getSheetId());
 
     // reset to original filter criteria
     if (setFilterFromScript) {
@@ -271,6 +312,25 @@ function copyData() {
       targetSheet.deleteColumn(columnNumber);
     });
   }
+
+  // display total count
+  if (totalCountArray.length) {
+    targetSheet.getRange(totalCountArray[0]).setValue(totalCountArray[1] + totalCount);
+  }
+
+  // display rows count by filter criteria
+  if (filterToCountInOutputArray.length) {
+    const targetFilterRange = targetSheet.getDataRange().getA1Notation().replace('A1', `A${dataHeaderRows}`);
+    filterToCountInOutputArray.forEach((item) => {
+      const outputFilter = targetSheet.getRange(targetFilterRange).createFilter();
+      item[2].forEach((data) => {
+        outputFilter.setColumnFilterCriteria(columnLetterToNumber(data[0]), data[1].build());
+      });
+      const count = getFilteredRowsLength(localSpreadsheetId, targetSheet.getName()) - dataHeaderRows;
+      targetSheet.getRange(item[0]).setValue(item[1] + count);
+      outputFilter.remove();
+    });
+  }
 }
 
 // function to convert column letters to numbers
@@ -289,7 +349,7 @@ function columnLetterToNumber(letter) {
 }
 
 // function to get hidden rows;
-const getHiddenRowsinGoogleSheets = (spreadsheetId, sheetId) => {
+function getHiddenRows(spreadsheetId, sheetId) {
   const fields = 'sheets(data(rowMetadata(hiddenByFilter)),properties/sheetId)';
   const { sheets } = Sheets.Spreadsheets.get(spreadsheetId, { fields });
   const [sheet] = sheets.filter(({ properties }) => {
@@ -305,4 +365,23 @@ const getHiddenRowsinGoogleSheets = (spreadsheetId, sheetId) => {
     .filter((rowId) => rowId !== -1);
 
   return hiddenRows;
-};
+}
+
+// function to get filtered rows count
+function getFilteredRowsLength(spreadsheetId, sheetName) {
+  let response = Sheets.Spreadsheets.get(spreadsheetId, {
+    ranges: [sheetName],
+    fields: 'sheets',
+  });
+  let data = response.sheets[0].data[0];
+  let filteredRows = data.rowMetadata.reduce((agg, row, index) => {
+    if (!row.hiddenByFilter) {
+      if (data.rowData[index]) {
+        let values = data.rowData[index].values.map((col) => col.formattedValue);
+        agg.push(values);
+      }
+    }
+    return agg;
+  }, []);
+  return filteredRows.length;
+}
